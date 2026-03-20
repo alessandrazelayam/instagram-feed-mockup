@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram Feed Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #FAF8F5;
+    --ink: #1A1714;
+    --muted: #8C8580;
+    --accent: #C9A96E;
+    --accent-light: #F0E8D8;
+    --border: #E8E2DA;
+    --success: #6B9E78;
+    --cell-size: 140px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  header p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 6px;
+    font-weight: 300;
+  }
+
+  .profile-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #E8B86D);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .profile-info span {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .profile-info small {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .tab {
+    padding: 10px 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+
+  /* Grid */
+  .grid-wrapper {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .feed-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+  }
+
+  .cell {
+    aspect-ratio: 1;
+    position: relative;
+    background: var(--border);
+    cursor: grab;
+    overflow: hidden;
+    border-radius: 2px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .cell:active { cursor: grabbing; }
+
+  .cell.drag-over {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 3px var(--accent);
+    z-index: 10;
+  }
+
+  .cell.dragging {
+    opacity: 0.4;
+    transform: scale(0.97);
+  }
+
+  .cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .cell-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .cell-empty svg {
+    opacity: 0.3;
+  }
+
+  .cell-number {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: white;
+    background: rgba(0,0,0,0.45);
+    padding: 2px 6px;
+    border-radius: 10px;
+    backdrop-filter: blur(4px);
+  }
+
+  .cell-actions {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.6));
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 6px 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .cell:hover .cell-actions { opacity: 1; }
+
+  .cell-btn {
+    background: rgba(255,255,255,0.9);
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--ink);
+    transition: background 0.15s;
+  }
+
+  .cell-btn:hover { background: white; }
+
+  /* Upload label */
+  .upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    gap: 6px;
+  }
+
+  .upload-label span {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .upload-label svg { opacity: 0.35; }
+
+  input[type="file"] { display: none; }
+
+  /* Controls */
+  .controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 9px 18px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--ink);
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .btn:hover { background: var(--accent-light); border-color: var(--accent); }
+
+  .btn-primary {
+    background: var(--ink);
+    color: white;
+    border-color: var(--ink);
+  }
+
+  .btn-primary:hover { background: #333; border-color: #333; }
+
+  .tip {
+    text-align: center;
+    font-size: 0.73rem;
+    color: var(--muted);
+    margin-top: 16px;
+    line-height: 1.6;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 999;
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 500px) {
+    :root { --cell-size: 110px; }
+    body { padding: 20px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Feed Planner</h1>
+  <p>Drag to reorder · Click to upload · Plan before you post</p>
+</header>
+
+<div class="profile-bar">
+  <div class="avatar">✦</div>
+  <div class="profile-info">
+    <span>@yourbrand</span>
+    <small>Feed preview — 9 posts</small>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active">Grid</div>
+  <div class="tab">Posts</div>
+  <div class="tab">Reels</div>
+</div>
+
+<div class="grid-wrapper">
+  <div class="feed-grid" id="feedGrid"></div>
+
+  <div class="controls">
+    <button class="btn" onclick="clearAll()">Clear All</button>
+    <button class="btn btn-primary" onclick="uploadAll()">Upload Images</button>
+  </div>
+
+  <p class="tip">
+    📌 Drag posts to reorder · Hover a post to remove it<br>
+    Your feed reads right→left, top→bottom (newest first)
+  </p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<input type="file" id="bulkUpload" accept="image/*" multiple onchange="handleBulkUpload(event)">
+
+<script>
+const SLOTS = 9;
+let images = new Array(SLOTS).fill(null);
+let dragSrc = null;
+
+function render() {
+  const grid = document.getElementById('feedGrid');
+  grid.innerHTML = '';
+
+  images.forEach((img, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.draggable = true;
+    cell.dataset.index = i;
+
+    const num = document.createElement('div');
+    num.className = 'cell-number';
+    num.textContent = i + 1;
+    cell.appendChild(num);
+
+    if (img) {
+      const el = document.createElement('img');
+      el.src = img;
+      el.alt = `Post ${i + 1}`;
+      cell.appendChild(el);
+
+      const actions = document.createElement('div');
+      actions.className = 'cell-actions';
+      const btn = document.createElement('button');
+      btn.className = 'cell-btn';
+      btn.textContent = 'Remove';
+      btn.onclick = (e) => { e.stopPropagation(); removeImage(i); };
+      actions.appendChild(btn);
+      cell.appendChild(actions);
+    } else {
+      const label = document.createElement('label');
+      label.className = 'upload-label';
+      label.htmlFor = `upload-${i}`;
+      label.innerHTML = `
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <line x1="12" y1="8" x2="12" y2="16"/>
+          <line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+        <span>Add photo</span>`;
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.id = `upload-${i}`;
+      input.accept = 'image/*';
+      input.onchange = (e) => handleSingleUpload(e, i);
+      cell.appendChild(label);
+      cell.appendChild(input);
+    }
+
+    // Drag events
+    cell.addEventListener('dragstart', (e) => {
+      dragSrc = i;
+      setTimeout(() => cell.classList.add('dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    cell.addEventListener('dragend', () => {
+      cell.classList.remove('dragging');
+      document.querySelectorAll('.cell').forEach(c => c.classList.remove('drag-over'));
+    });
+
+    cell.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.cell').forEach(c => c.classList.remove('drag-over'));
+      cell.classList.add('drag-over');
+    });
+
+    cell.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (dragSrc !== null && dragSrc !== i) {
+        [images[dragSrc], images[i]] = [images[i], images[dragSrc]];
+        render();
+        showToast('Posts swapped ✦');
+      }
+      dragSrc = null;
+    });
+
+    grid.appendChild(cell);
+  });
+}
+
+function handleSingleUpload(e, index) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    images[index] = ev.target.result;
+    render();
+    showToast(`Post ${index + 1} uploaded ✦`);
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleBulkUpload(e) {
+  const files = Array.from(e.target.files).slice(0, SLOTS);
+  let loaded = 0;
+  files.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      images[i] = ev.target.result;
+      loaded++;
+      if (loaded === files.length) { render(); showToast(`${files.length} images loaded ✦`); }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function removeImage(i) {
+  images[i] = null;
+  render();
+  showToast('Post removed');
+}
+
+function clearAll() {
+  if (!confirm('Clear all posts from the grid?')) return;
+  images = new Array(SLOTS).fill(null);
+  render();
+  showToast('Grid cleared');
+}
+
+function uploadAll() {
+  document.getElementById('bulkUpload').click();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+render();
+</script>
+</body>
+</html>
